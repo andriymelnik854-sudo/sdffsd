@@ -1,0 +1,21 @@
+# Автосборка APK на GitHub. Работает в двух вариантах:
+#  1) в репозитории лежит вся папка проекта;
+#  2) в репозитории лежит только архив RageXorus-Native.zip (удобно загрузить с телефона) + этот файл.
+# Готовый APK: вкладка Actions → последний запуск → Artifacts → RageXorus-Native-apk.
+name: Android APK
+on: [push, workflow_dispatch]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Распаковать архив проекта (если загружен zip)
+        run: |
+          if [ -f RageXorus-Native.zip ]; then unzip -q -o RageXorus-Native.zip -d _src; D=$(dirname $(find _src -name settings.gradle | head -1)); echo "PROJ=$D" >> $GITHUB_ENV; else D=$(dirname "$(find . -name settings.gradle -not -path './_src/*' | head -1)"); echo "PROJ=$D" >> $GITHUB_ENV; fi
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - uses: android-actions/setup-android@v3
+      - name: Сборка
+        run: cd "$PROJ" && chmod +x gradlew && ./gradlew assembleRelease --no-daemon --stacktrace
+      - uses: actions/upload-artifact@v4
+        with: { name: RageXorus-Native-apk, path: "${{ env.PROJ }}/app/build/outputs/apk/release/*.apk" }
